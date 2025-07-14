@@ -1,4 +1,5 @@
 from textnode import TextNode, TextType
+import re
 
 
 def split_nodes_inline_delimiter(old_nodes, delimiter, text_type):
@@ -21,3 +22,74 @@ def split_nodes_inline_delimiter(old_nodes, delimiter, text_type):
         res.extend(splitted_text)
 
     return res
+
+
+def split_nodes_image(old_nodes):
+    new_nodes = []
+    for node in old_nodes:
+        if node.text_type != TextType.TEXT:
+            new_nodes.append(node)
+            continue
+        original_text = node.text
+        matches = extract_markdown_images(original_text)
+
+        if not matches:
+            new_nodes.append(node)
+            continue
+
+        curr_text = original_text
+        for image_alt, image_link in matches:
+            sections = curr_text.split(f"![{image_alt}]({image_link})", 1)
+            leading_text = sections[0]
+            if leading_text:
+                new_nodes.append(TextNode(leading_text, TextType.TEXT))
+            new_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
+            curr_text = sections[1]
+
+        if curr_text:
+            new_nodes.append(TextNode(curr_text, TextType.TEXT))
+
+    return new_nodes
+
+
+def split_nodes_link(old_nodes):
+    new_nodes = []
+    for node in old_nodes:
+        if node.text_type != TextType.TEXT:
+            new_nodes.append(node)
+            continue
+        original_text = node.text
+        matches = extract_markdown_links(original_text)
+
+        if not matches:
+            new_nodes.append(node)
+            continue
+
+        curr_text = original_text
+        for link_alt, link_url in matches:
+            sections = curr_text.split(f"[{link_alt}]({link_url})", 1)
+            leading_text = sections[0]
+            if leading_text:
+                new_nodes.append(TextNode(leading_text, TextType.TEXT))
+            new_nodes.append(TextNode(link_alt, TextType.LINK, link_url))
+            curr_text = sections[1]
+
+        if curr_text:
+            new_nodes.append(TextNode(curr_text, TextType.TEXT))
+
+    return new_nodes
+
+
+# helper methods for images and links
+
+
+def extract_markdown_images(text):
+
+    pattern = r"!\[([^\]]*)\]\(([^)]*)\)"
+    return re.findall(pattern, text)
+
+
+def extract_markdown_links(text):
+
+    pattern = r"(?<!\!)\[([^\]]*)\]\(([^)]*)\)"
+    return re.findall(pattern, text)
