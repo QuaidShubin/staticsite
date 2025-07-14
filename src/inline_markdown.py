@@ -1,5 +1,20 @@
 from textnode import TextNode, TextType
 import re
+from functools import partial
+
+
+def text_to_textnodes(text):
+    functions = [
+        split_nodes_image,
+        split_nodes_link,
+        partial(split_nodes_inline_delimiter, delimiter="**", text_type=TextType.BOLD),
+        partial(split_nodes_inline_delimiter, delimiter="_", text_type=TextType.ITALIC),
+        partial(split_nodes_inline_delimiter, delimiter="`", text_type=TextType.CODE),
+    ]
+    curr_text_nodes = [TextNode(text, TextType.TEXT)]
+    for func in functions:
+        curr_text_nodes = func(curr_text_nodes)
+    return curr_text_nodes
 
 
 def split_nodes_inline_delimiter(old_nodes, delimiter, text_type):
